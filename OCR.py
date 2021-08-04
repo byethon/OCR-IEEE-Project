@@ -25,6 +25,7 @@ gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 ####CONVOLUTION 1####
 ## Pre-Processing for Paragraph detection ##
+line_img = cv2.resize(gray, (800,int(expect_h/2)), interpolation=cv2.INTER_AREA)
 para_img = cv2.resize(gray, (400,int(expect_h/4)), interpolation=cv2.INTER_AREA)
 para_blur = cv2.blur(para_img, (45,3))
 para_thresh_val, para_thresh = cv2.threshold(para_blur, 0, 255, cv2.THRESH_OTSU)
@@ -61,33 +62,47 @@ def contourprocess(inputimg):
                     print("Not optimized")
                 else:
                     test=cv2.rectangle(hsv, (x,y), (x+w , y+h), (255,0,0), 2)
-                    cv2.imshow('test',test)
-                    cv2.waitKey(500)
+                    #cv2.imshow('test',test)
+                    #cv2.waitKey(500)
                     crop_arr.append((x,y,w,h))
             f=f+1
         step=step+8
     return crop_arr
 
 
-def convulextractor(extract_list, scale_factor, inputimg):
+def convulextractor(extract_list, scale_factor, inputimg, scale_factor_D, featurex2img):
     extract_arr = np.array(extract_list, dtype=[('loc_x', np.int32), ('loc_y', np.int32), ('char_w', np.int32), ('char_h', np.int32)])
     f=0
     extracted = []
+    featureimg = []
     for val in extract_arr:
-        x = extract_arr[f]['loc_x'] * scale_factor
-        y = extract_arr[f]['loc_y'] * scale_factor
-        w = extract_arr[f]['char_w'] * scale_factor
-        h = extract_arr[f]['char_h'] * scale_factor
-        crop = inputimg[y:y+h,x:x+w] * scale_factor
+        x = extract_arr[f]['loc_x']
+        y = extract_arr[f]['loc_y']
+        w = extract_arr[f]['char_w']
+        h = extract_arr[f]['char_h']
+        crop = inputimg[((y-12)*scale_factor):((y+h+12)*scale_factor),((x-12)*scale_factor):((x+w)*scale_factor)]
         extracted.append(crop)
+        crop = featurex2img[((y-12)*scale_factor_D):((y+h+12)*scale_factor_D),(x*scale_factor_D):((x+w)*scale_factor_D)]
+        featureimg.append(crop)
         f=f+1
-    return extracted
-    
-para = convulextractor(contourprocess(para_blur_x2), 1, para_blur)
+    return extracted, featureimg
+   
+para, para_D = convulextractor(contourprocess(para_blur_x2), 1, para_blur, 2, line_img)
 
 ## Pre-Processing for line detection ##
 ## NOT SETUP FOR NOW
 ## FOR OPTIMIZATION LATER
 ## END ##
+f=0
 for val in para:
-    para = convulextractor(contourprocess(val), 1, para_img)
+    val_D = para_D[f]
+    cv2.imshow('test', val_D)
+    cv2.waitKey(500)
+    lines, lines_D = convulextractor(contourprocess(val), 2, val_D, 2, gray)
+
+f=0
+for val in lines:
+    val_D=lines_D[f]
+    cv2.imshow('test', val)
+    cv2.waitKey(500)
+    #words = convulextractor(contourprocess(val), 2, line_img)
